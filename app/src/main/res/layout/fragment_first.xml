@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".FirstFragment">
+
+    <TextView
+        android:id="@+id/ld_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:text="hello world"
+        android:textSize="30sp"
+        app:layout_constraintEnd_toEndOf="@id/ld_btn"
+        app:layout_constraintStart_toStartOf="@id/ld_btn"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/ld_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="LiveData"
+        app:layout_constraintEnd_toStartOf="@id/flow_btn"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ld_text" />
+
+    <TextView
+        android:id="@+id/flow_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="hello world"
+        android:textSize="30sp"
+        app:layout_constraintEnd_toEndOf="@id/flow_btn"
+        app:layout_constraintStart_toStartOf="@id/flow_btn"
+        app:layout_constraintTop_toTopOf="@id/ld_text" />
+
+    <Button
+        android:id="@+id/flow_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Flow"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/ld_btn"
+        app:layout_constraintTop_toTopOf="@+id/ld_btn" />
+
+    <TextView
+        android:id="@+id/state_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="hello world"
+        android:textSize="30sp"
+        app:layout_constraintEnd_toEndOf="@id/state_btn"
+        app:layout_constraintStart_toStartOf="@id/state_btn"
+        app:layout_constraintTop_toBottomOf="@id/flow_btn" />
+
+    <Button
+        android:id="@+id/state_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="state flow"
+        app:layout_constraintEnd_toStartOf="@id/share_btn"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/state_text" />
+
+    <TextView
+        android:id="@+id/share_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="hello world"
+        android:textSize="30sp"
+        app:layout_constraintEnd_toEndOf="@id/share_btn"
+        app:layout_constraintStart_toStartOf="@id/share_btn"
+        app:layout_constraintTop_toTopOf="@id/state_text" />
+
+    <Button
+        android:id="@+id/share_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="share flow"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/state_btn"
+        app:layout_constraintTop_toBottomOf="@+id/share_text" />
+
+    <TextView
+        android:id="@+id/textview_first"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:text="@string/hello_first_fragment"
+        app:layout_constraintBottom_toBottomOf="@id/button_first"
+        app:layout_constraintStart_toEndOf="@id/button_first"
+        app:layout_constraintTop_toTopOf="@id/button_first" />
+
+    <Button
+        android:id="@+id/button_first"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="40dp"
+        android:text="@string/next"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>
