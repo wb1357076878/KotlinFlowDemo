@@ -193,7 +193,7 @@ lifecycleScope.launch {
 
 ![image.png](/resources/pic02.png)
 
-这里`Lifecycle.repeatOnLifecycle`用法如上图所示，顺便说下该`repeatOnLifecycle`是基于`lifecycte-runtime-ktx:2.4.0`版本才有的新接口，如果你的没有找到该api，请检查你的库版本。
+这里`Lifecycle.repeatOnLifecycle`用法如上图所示，顺便说下该`repeatOnLifecycle`是基于`lifecycle-runtime-ktx:2.4.0`版本才有的新接口，如果你的没有找到该api，请检查你的库版本。
 
 要解释这里为什么要这么使用需要了解`activity/fragment`生命周期
 
