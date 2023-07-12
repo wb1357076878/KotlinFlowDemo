@@ -10,9 +10,15 @@ Flow 是 Kotlin 协程库中的一个概念和类，用于处理异步数据流�
 2. 声明式编程：Flow 提供了一种声明式的编程模型，通过操作符（operators）链式调用来处理数据流。这使得代码更简洁、易读和易于维护。
 3. 可组合性：Flow 的操作符可以组合在一起，构建复杂的数据转换和处理逻辑。您可以使用 `map`、`filter`、`flatMap`、`zip` 等操作符来转换、过滤、合并和组合数据流。
 4. 挂起函数：Flow 的操作可以在挂起函数中执行，使其适用于与协程一起使用。这样可以方便地进行异步操作和并发编程，避免了回调地狱和复杂的线程管理。
-5. 取消支持：Flow 具有与协程一样的取消支持。可以使用 `cancel`、`collect` 中的 `cancellable` 参数或 `withTimeout` 等函数来取消数据流的收集和处理。
+5. 取消支持：Flow 具有与协程一样的取消支持。可以使用 `cancel`、`collect` 中的 `cancellable` 参数或 `withTimeout` 等函数来取消数据流的收集和处理。 
 
-### 在介绍flow具体用法之前，先说明下flow的冷流，热流
+### 在介绍flow具体用法之前，先说明下flow的一些概念：
+#### Flow组成
+- Producers（生产者）：数据流的产生`emit`
+- Customers（消费者）：数据流的收集`collect`
+- Operators（中间操作符）：数据流的二次加工
+
+#### flow的冷流&热流
 
 在 Kotlin 的协程中，"冷流"（Cold Flow）和"热流"（Hot Flow）是用来描述 Flow 和 SharedFlow 两种不同的数据流的特性，还有一种特别的热流，StateFlow，它继承自SharedFlow
 ```kotlin
@@ -24,7 +30,7 @@ public interface StateFlow<out T> : SharedFlow<T> {
 }
 ```
 
-### cold flow & hot flow区别
+#### cold flow & hot flow区别
 1. 冷流（Cold Flow）：
     - 冷流是指每次订阅都会重新开始并独立运行的数据流。
     - 当每个订阅者开始收集数据时，冷流会从头开始发射数据，每个订阅者都会独立地接收到完整的数据流。
@@ -135,12 +141,183 @@ try {
 ```
 这里的`single()`操作符作用如下：
 1.  **获取单个元素**：`single()` 操作符用于获取 Flow 中的单个元素。如果 Flow 中只包含一个元素，它将返回该元素；如果 Flow 中包含多个元素或没有元素，它将抛出 `IllegalArgumentException` 异常。
-1.  **用于确保 Flow 只包含一个元素**：`single()` 可以用作 Flow 的检查机制，确保 Flow 中只包含一个元素。如果 Flow 中的元素数量不符合预期，`single()` 将抛出异常，提供了一种简单的验证和安全性检查。
-1.  **简化处理单个元素的情况**：当你只关心 Flow 中的单个元素，并希望在处理该元素时终止流的收集时，可以使用 `single()`。它能够简化对单个元素的处理逻辑。
+2.  **用于确保 Flow 只包含一个元素**：`single()` 可以用作 Flow 的检查机制，确保 Flow 中只包含一个元素。如果 Flow 中的元素数量不符合预期，`single()` 将抛出异常，提供了一种简单的验证和安全性检查。
+3.  **简化处理单个元素的情况**：当你只关心 Flow 中的单个元素，并希望在处理该元素时终止流的收集时，可以使用 `single()`。它能够简化对单个元素的处理逻辑。
+
+### distinctUntilChanged
+数据去重
+
+```
+createFlow().distinctUntilChanged().collectLatest {
+    println("emit value = $it")
+}
+```
 
 ## StateFlow
+### 创建
+**stateFlow**初始化的时候必须要有一个初始值
+```kotlin
+public fun <T> MutableStateFlow(value: T): MutableStateFlow<T> = StateFlowImpl(value ?: NULL)
+```
+用法也很简单，几乎和LiveData一样，都有一个`value`属性，赋值都是给`value`赋值
+```kotlin
+private val _stateFlow = MutableStateFlow("Hello world")
+val stateFlow: StateFlow<String> = _stateFlow.asStateFlow()
+
+fun triggerStateFlow() {
+    _stateFlow.value = "StateFlow"
+}
+```
+
+### 使用
+```
+lifecycleScope.launch {
+    repeatOnLifecycle(Lifecycle.State.STARTED) {
+        launch {
+            viewModel.stateFlow.collectLatest {
+                binding.stateText.text = it
+                Snackbar.make(
+                    binding.root,
+                    it,
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+     }
+ }
+```
+每次给`stateflow.value`赋值，都会触发`collect`方法，类似`livedata.observe(this)`,
+只不过collect是协程挂起函数，需要在`Coroutine.Scope`中执行代码块。
+
+### 如何与LifecycleScope协作
+
+![image.png](/resources/pic02.png)
+
+这里`Lifecycle.repeatOnLifecycle`用法如上图所示，顺便说下该`repeatOnLifecycle`是基于`lifecycte-runtime-ktx:2.4.0`版本才有的新接口，如果你的没有找到该api，请检查你的库版本。
+
+要解释这里为什么要这么使用需要了解`activity/fragment`生命周期
+
+
+当我们直接使用：
+```
+lifecycleScope.launch {
+    viewModel.triggerFlow().collectLatest {
+        binding.flowText.text = it
+    }
+}
+```
+这种方式是不安全的，当app进入后台的时候，生命周期函数是走到`onStop`,但是此刻flow所在的协程还是处在活跃状态，可以正常收集数据，这就造成了数据的浪费，甚至产生内存泄漏现象如下图所示；
+
+![image.png](/resources/pic04.png)
+
+
+当我们使用`repeatOnLifecycle(Lifecycle.State.STARTED)`的时候，看下图：
+
+![image.png](/resources/pic05.png)
+
+当app进入后台的时候我们的协程挂起函数会处于挂起状态，此时会停止收集flow；重新进入前台后，挂起函数会重新运行；
+
+### 数据防抖动
+**StateFlow**和**LiveData**一个重要的区别在于，**LiveData**在重复设置`value`为相同值的情况下，会重复触发`observe`回调, 它是不防抖的；
+
+**StateFlow** 防抖，它天生有去重的功能！效果类似`Flow.distinctUntilChanged()`这是因为它的源码中有这段逻辑：
+
+
+```
+private fun updateState(expectedState: Any?, newState: Any): Boolean {
+    var curSequence = 0
+    var curSlots: Array<StateFlowSlot?>? = this.slots // benign race, we will not use it
+    synchronized(this) {
+        val oldState = _state.value
+        if (expectedState != null && oldState != expectedState) return false // CAS support
+        if (oldState == newState) return true
+    
+```
+
+`stateflow`调用`distinctUntilChanged`会报错如下
+```
+@Deprecated(
+    level = DeprecationLevel.ERROR,
+    message = "Applying 'distinctUntilChanged' to StateFlow has no effect. See the StateFlow documentation on Operator Fusion.",
+    replaceWith = ReplaceWith("this")
+)
+public fun <T> StateFlow<T>.distinctUntilChanged(): Flow<T> = noImpl()
+```
+
+
+### 粘性数据（数据倒灌）
+
+当屏幕翻转或跳转返回，或者弹Dialog的时候，stateFlow会发生数据倒灌，stateflow的value会重新发送给消费者，触发collect代码块；
+这与LiveData是一致的，后面ShareFlow会讲到如何避免这种情况！
+
 
 ## SharedFlow
+
+### 创建
+SharedFlow和StateFlow一样，`SharedFlow` 也有两个版本：`SharedFlow` 与 `MutableSharedFlow`。
+
+```
+private val _sharedFlow = MutableSharedFlow<String>()
+val sharedFlow = _sharedFlow.asSharedFlow()
+
+
+fun triggerSharedFlow() {
+    viewModelScope.launch {
+        _sharedFlow.emit("SharedFlow")
+    }
+}
+
+```
+初始化方法：
+```
+public fun <T> MutableSharedFlow(
+    replay: Int = 0,
+    extraBufferCapacity: Int = 0,
+    onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND
+)
+```
+
+它和StateFlow区别在于
+1. 没有初始值；
+2. SharedFlow可以保留历史数据，stateFlow只会保存最新的值；
+3. SharedFlow发射数据用`emit`,没有`setValue`方法；
+
+**stateFlow继承自SharedFlow**
+
+[StateFlow是SharedFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-shared-flow/index.html)的一种特殊用途、高性能且高效的实现，用于狭窄但广泛使用的共享状态的情况。有关适用于所有共享流的基本规则、约束和运算符，请参阅[SharedFlow文档。](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-shared-flow/index.html)
+
+StateFlow始终有一个初始值，向新订阅者重播一个最新值，不再缓冲任何其他值，但保留最后发出的值，并且不支持[ResetReplayCache](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-mutable-shared-flow/reset-replay-cache.html)。当使用以下参数创建StateFlow并对其应用`distinctUntilChanged`运算符时，StateFlow的行为与共享流相同：
+
+```kotlin
+// MutableStateFlow(initialValue) is a shared flow with the following parameters:
+val shared = MutableSharedFlow(
+    replay = 1,
+    onBufferOverflow = BufferOverflow.DROP_OLDEST
+)
+shared.tryEmit(initialValue) // emit the initial value
+val state = shared.distinctUntilChanged() // get StateFlow-like behavior
+```
+
+当您需要对[StateFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-state-flow/index.html)的行为进行调整（例如额外缓冲、重播更多值或省略初始值）时，请使用[SharedFlow 。](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-shared-flow/index.html)
+
+### 使用
+使用和StateFlow 类似
+```
+
+lifecycleScope.launch {
+    repeatOnLifecycle(Lifecycle.State.STARTED) {
+        launch {
+            viewModel.sharedFlow.collectLatest {
+                binding.shareText.text = it
+            }
+        }
+    }
+}
+```
+默认情况下，replay = 0,当有新的订阅者的时候，SharedFlow不会向它发送数据。这里有点像通知的感觉。
+
+正因为默认情况下 replay = 0，SharedFlow不会有数据倒灌的情况发生。
+具体查看Demo演示。
 
 
 ## 总结
@@ -174,9 +351,4 @@ Flow、StateFlow和SharedFlow是Kotlin协程库中用于处理异步数据流的
 
 ## 参考
 官方文档[StateFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-state-flow/)&[SharedFlow](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-shared-flow/)
-
-
-
-
-
 

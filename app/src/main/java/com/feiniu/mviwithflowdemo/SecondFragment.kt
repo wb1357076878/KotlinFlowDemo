@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.feiniu.mviwithflowdemo.databinding.FragmentSecondBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -70,6 +71,14 @@ class SecondFragment : Fragment() {
             }
         }
 
+        lifecycleScope.launch {
+            createFlow().flowOn(Dispatchers.IO).collect {
+                // flowOn 作用：将执行此流的上下文更改为给定的上下文。
+            }
+            createFlow().distinctUntilChanged().collectLatest {
+                println("emit value = $it")
+            }
+        }
     }
 
     private fun createFlow(): Flow<Int> {
@@ -77,6 +86,7 @@ class SecondFragment : Fragment() {
             emit(100)
             delay(500)
             emit(200)
+//            emit(200)
             emit(300)
         }
     }
